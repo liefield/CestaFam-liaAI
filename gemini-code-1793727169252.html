@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cesta Família - Ilha do Governador</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ícones FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Configurações PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#059669">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cesta Família">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans pb-28">
+
+    <!-- CABEÇALHO -->
+    <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="flex justify-between items-center max-w-md mx-auto">
+            <div>
+                <span class="text-xs uppercase tracking-wider bg-emerald-700 px-2 py-0.5 rounded-full font-medium">Família Ativa</span>
+                <h1 class="text-lg font-bold mt-1"><i class="fa-solid fa-basket-shopping mr-2"></i>Cesta Família</h1>
+            </div>
+            <div class="text-right">
+                <span class="text-xs block text-emerald-100" id="sync-status">🟢 Em Direto</span>
+                <span class="text-xs font-semibold block bg-emerald-700/60 px-2 py-0.5 rounded mt-1" id="active-store-badge">Assaí (Jd. Carioca)</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-md mx-auto p-4 space-y-4">
+
+        <!-- TELA 1: CARRINHO & LISTA DE COMPRAS INTELIGENTE -->
+        <div id="view-lista" class="space-y-4">
+            <!-- PAINEL DE CONTROLO DO CARRINHO -->
+            <div class="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 rounded-2xl shadow-md space-y-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs text-emerald-100 uppercase tracking-wider font-semibold">Total no Carrinho Físico</p>
+                        <h2 id="total-price" class="text-3xl font-extrabold mt-0.5">R$ 0,00</h2>
+                    </div>
+                    <div class="text-right bg-emerald-800/50 px-3 py-2 rounded-xl backdrop-blur-sm">
+                        <p class="text-[10px] text-emerald-200 uppercase tracking-wider">Progresso da Compra</p>
+                        <span id="items-counter" class="text-base font-bold">0 / 0 artigos</span>
+                    </div>
+                </div>
+                <!-- Barra de Progresso Visual -->
+                <div class="w-full bg-emerald-900/40 rounded-full h-2 overflow-hidden">
+                    <div id="progress-bar" class="bg-amber-400 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="flex bg-slate-200 p-1 rounded-xl">
+                <button onclick="switchCategory('mercado')" id="cat-mercado" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white shadow-sm transition">🛒 Supermercado</button>
+                <button onclick="switchCategory('farmacia')" id="cat-farmacia" class="flex-1 py-2 text-sm font-medium text-slate-600 transition">💊 Farmácia & Saúde</button>
+            </div>
+
+            <!-- FORMULÁRIO PARA ADICIONAR ARTIGO -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 space-y-2">
+                <div class="flex gap-2">
+                    <input type="text" id="item-input" placeholder="Adicionar artigo (ex: Arroz, Leite...)" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                    <input type="number" id="price-input" placeholder="R$ 0,00" class="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                    <button onclick="addItem()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                <select id="aisle-input" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500 bg-white text-slate-600">
+                    <option value="Mercearia & Despensa">📦 Corredor: Mercearia & Despensa</option>
+                    <option value="Hortifrúti">🍎 Corredor: Hortifrúti & Sacolão</option>
+                    <option value="Açougue & Frios">🥩 Corredor: Açougue & Frios</option>
+                    <option value="Limpeza">🧹 Corredor: Limpeza</option>
+                    <option value="Higiene & Farmácia">💊 Corredor: Higiene & Farmácia</option>
+                </select>
+            </div>
+
+            <!-- LISTAGEM ORGANIZADA POR CORREDORES DO CARRINHO -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center px-1">
+                    <h3 id="list-title" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Carrinho por Corredor</h3>
+                    <button onclick="clearCompletedItems()" class="text-xs text-rose-500 font-semibold hover:underline">Limpar Comprados</button>
+                </div>
+                <div id="shopping-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- TELA 2: CONSULTOR IA DE PREÇOS LOCAIS -->
+        <div id="view-ia" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-bold text-slate-700"><i class="fa-solid fa-wand-magic-sparkles text-emerald-600 mr-2"></i>Consultor IA de Preços (Ilha)</h3>
+                <p class="text-xs text-slate-500">Consulte a IA para encontrar o melhor preço nos mercados locais:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-query-input" placeholder="Ex: Leite Integral, Tomate, Fralda..." class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                    <button onclick="askLocalAI()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="ai-response-box" class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 hidden space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider"><i class="fa-solid fa-robot mr-1"></i> Análise do Consultor IA</span>
+                    <span id="ai-query-title" class="text-xs font-semibold text-slate-500"></span>
+                </div>
+                <p id="ai-response-text" class="text-sm text-slate-700 leading-relaxed"></p>
+                <div id="ai-market-cards" class="space-y-2 pt-2"></div>
+            </div>
+
+            <div class="space-y-2">
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Sugestões Rápidas da Região</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="quickAiSearch('Leite Integral')" class="p-3 bg-white border border-slate-100 rounded-xl text-left text-xs font-semibold text-slate-700 hover:border-emerald-500 transition">🥛 Leite Integral</button>
+                    <button onclick="quickAiSearch('Arroz')" class="p-3 bg-white border border-slate-100 rounded-xl text-left text-xs font-semibold text-slate-700 hover:border-emerald-500 transition">🌾 Menor preço de Arroz</button>
+                    <button onclick="quickAiSearch('Hortifrúti')" class="p-3 bg-white border border-slate-100 rounded-xl text-left text-xs font-semibold text-slate-700 hover:border-emerald-500 transition">🍎 Melhor Hortifrúti (Cacuia)</button>
+                    <button onclick="quickAiSearch('Fralda')" class="p-3 bg-white border border-slate-100 rounded-xl text-left text-xs font-semibold text-slate-700 hover:border-emerald-500 transition">👶 Promoção de Fraldas</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 3: MERCADOS & RAIO -->
+        <div id="view-mercados" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700"><i class="fa-solid fa-map-location-dot text-emerald-600 mr-2"></i>Raio de Alcance</h3>
+                    <span id="radius-label" class="text-sm font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">5 km</span>
+                </div>
+                <input type="range" id="radius-slider" min="1" max="15" value="5" oninput="updateRadius(this.value)" class="w-full accent-emerald-600 cursor-pointer">
+            </div>
+            <div class="flex justify-between items-center px-1">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Locais na Ilha</h3>
+                <button onclick="openStoreModal()" class="text-xs text-emerald-600 font-semibold hover:underline">+ Registar Local</button>
+            </div>
+            <div id="stores-list" class="space-y-2"></div>
+        </div>
+
+        <!-- TELA 4: HISTÓRICO & CALENDÁRIO MÊS (RJ) -->
+        <div id="view-historico" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-3">
+                <h3 class="font-bold text-slate-700"><i class="fa-solid fa-calendar-days text-emerald-600 mr-2"></i>Ciclo de Preços (RJ)</h3>
+                <p class="text-xs text-slate-500">Saiba se o artigo costuma estar mais barato no início ou fim do mês:</p>
+                <input type="text" id="search-history-input" oninput="searchPriceHistory(this.value)" placeholder="Procurar artigo..." class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+            </div>
+            <div id="history-results" class="space-y-3"></div>
+        </div>
+
+    </main>
+
+    <!-- MODAL PARA REGISTAR NOVO MERCADO -->
+    <div id="store-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-xl">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Registar Novo Estabelecimento</h3>
+                <button onclick="closeStoreModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3">
+                <input type="text" id="new-store-name" placeholder="Nome (ex: Hortifrúti Frutalha)" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <select id="new-store-cat" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                    <option value="Supermercado">Supermercado</option>
+                    <option value="Hortifrúti">Hortifrúti</option>
+                    <option value="Farmácia">Farmácia</option>
+                </select>
+                <input type="number" id="new-store-dist" value="1.5" step="0.1" placeholder="Distância (km)" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500">
+                <button onclick="saveNewStore()" class="w-full bg-emerald-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENU INFERIOR FIXO -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-3 px-6 shadow-lg z-40">
+        <div class="max-w-md mx-auto flex justify-around text-slate-400 text-xs">
+            <button onclick="switchView('lista')" id="nav-lista" class="flex flex-col items-center text-emerald-600 transition"><i class="fa-solid fa-list text-lg"></i><span>Carrinho</span></button>
+            <button onclick="switchView('ia')" id="nav-ia" class="flex flex-col items-center hover:text-emerald-600 transition"><i class="fa-solid fa-wand-magic-sparkles text-lg"></i><span>Consultor IA</span></button>
+            <button onclick="switchView('mercados')" id="nav-mercados" class="flex flex-col items-center hover:text-emerald-600 transition"><i class="fa-solid fa-map-location-dot text-lg"></i><span>Locais</span></button>
+            <button onclick="switchView('historico')" id="nav-historico" class="flex flex-col items-center hover:text-emerald-600 transition"><i class="fa-solid fa-calendar-days text-lg"></i><span>Histórico</span></button>
+        </div>
+    </nav>
+
+    <!-- FIREBASE E LÓGICA DA APLICAÇÃO -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBC9GtNhhSPKydgq8gI7Q89OEsJNo2EdPc",
+            authDomain: "cestafamiliaai.firebaseapp.com",
+            projectId: "cestafamiliaai",
+            storageBucket: "cestafamiliaai.firebasestorage.app",
+            messagingSenderId: "757339423876",
+            appId: "1:757339423876:web:7f9f34739b959628996ed1",
+            measurementId: "G-VFMTG5QSFV"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const familiaDocRef = doc(db, "familias", "ilha_do_governador_01");
+
+        window.appData = {
+            activeStore: 'Assaí Atacadista (Jd. Carioca)',
+            mercado: [
+                { id: 1, name: 'Arroz Tio João 5kg', price: 27.90, bought: false, aisle: 'Mercearia & Despensa' },
+                { id: 2, name: 'Leite Integral 1L', price: 5.49, bought: false, aisle: 'Mercearia & Despensa' },
+                { id: 3, name: 'Café Pilão 500g', price: 18.50, bought: false, aisle: 'Mercearia & Despensa' },
+                { id: 4, name: 'Tomate Kg', price: 8.90, bought: false, aisle: 'Hortifrúti' }
+            ],
+            farmacia: [
+                { id: 101, name: 'Dipirona 500mg', price: 8.90, bought: false, aisle: 'Higiene & Farmácia' },
+                { id: 102, name: 'Fralda Huggies XXG', price: 64.90, bought: false, aisle: 'Higiene & Farmácia' }
+            ],
+            stores: [
+                { id: 1, name: 'Assaí Atacadista (Jd. Carioca)', cat: 'Supermercado', dist: 2.1 },
+                { id: 2, name: 'Supermarket (Cocotá)', cat: 'Supermercado', dist: 3.5 },
+                { id: 3, name: 'Frutalha Hortifrúti (Cacuia)', cat: 'Hortifrúti', dist: 1.8 }
+            ],
+            priceHistory: [
+                { name: 'Arroz Tio João 5kg', price: 26.90, period: 'Fim do Mês (21-31)', store: 'Assaí' },
+                { name: 'Leite Integral 1L', price: 5.29, period: 'Fim do Mês (21-31)', store: 'Assaí' }
+            ]
+        };
+
+        window.saveData = async function() {
+            try {
+                await setDoc(familiaDocRef, window.appData);
+                document.getElementById('sync-status').innerText = '🟢 Em Direto';
+            } catch (error) {
+                document.getElementById('sync-status').innerText = '🟠 Salvo Offline';
+                localStorage.setItem('cesta_familia_offline', JSON.stringify(window.appData));
+            }
+        };
+
+        onSnapshot(familiaDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                window.appData = docSnap.data();
+                document.getElementById('sync-status').innerText = '🟢 Em Direto';
+                window.renderList();
+            } else {
+                window.saveData();
+            }
+        }, (error) => {
+            document.getElementById('sync-status').innerText = '🟠 Modo Offline';
+            const local = localStorage.getItem('cesta_familia_offline');
+            if (local) { window.appData = JSON.parse(local); window.renderList(); }
+        });
+
+        let currentView = 'lista';
+        let activeCategory = 'mercado';
+        let currentRadius = 5;
+
+        window.switchView = function(view) {
+            currentView = view;
+            ['lista', 'ia', 'mercados', 'historico'].forEach(v => {
+                document.getElementById(`view-${v}`).classList.add('hidden');
+                document.getElementById(`nav-${v}`).className = "flex flex-col items-center text-slate-400 hover:text-emerald-600 transition";
+            });
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+            document.getElementById(`nav-${view}`).className = "flex flex-col items-center text-emerald-600 transition";
+        }
+
+        window.switchCategory = function(cat) {
+            activeCategory = cat;
+            document.getElementById('cat-mercado').className = cat === 'mercado' ? "flex-1 py-2 text-sm font-semibold rounded-lg bg-white shadow-sm transition" : "flex-1 py-2 text-sm font-medium text-slate-600 transition";
+            document.getElementById('cat-farmacia').className = cat === 'farmacia' ? "flex-1 py-2 text-sm font-semibold rounded-lg bg-white shadow-sm transition" : "flex-1 py-2 text-sm font-medium text-slate-600 transition";
+            window.renderList();
+        }
+
+        // --- RENDERIZAÇÃO DO CARRINHO INTELIGENTE POR CORREDORES ---
+        window.renderList = function() {
+            const listContainer = document.getElementById('shopping-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            const currentItems = window.appData[activeCategory] || [];
+            document.getElementById('list-title').innerText = activeCategory === 'mercado' ? 'Carrinho por Corredor' : 'Farmácia no Carrinho';
+
+            let total = 0, boughtCount = 0;
+            const grouped = {};
+
+            currentItems.forEach((item, index) => {
+                if (item.bought) { 
+                    total += Number(item.price || 0); 
+                    boughtCount++; 
+                }
+                const aisle = item.aisle || 'Mercearia & Despensa';
+                if (!grouped[aisle]) grouped[aisle] = [];
+                grouped[aisle].push({ ...item, originalIndex: index });
+            });
+
+            // Atualizar o painel do carrinho
+            document.getElementById('total-price').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
+            document.getElementById('items-counter').innerText = `${boughtCount} / ${currentItems.length} artigos`;
+            
+            const progressPercent = currentItems.length > 0 ? (boughtCount / currentItems.length) * 100 : 0;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            if (currentItems.length === 0) {
+                listContainer.innerHTML = `<div class="p-6 bg-white rounded-xl text-center text-slate-400 text-sm">O seu carrinho está vazio. Adicione artigos acima!</div>`;
+                return;
+            }
+
+            for (let aisle in grouped) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = "bg-white p-3 rounded-xl shadow-sm border border-slate-100 space-y-2";
+                let html = `<h4 class="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1 flex items-center justify-between"><span><i class="fa-solid fa-store mr-1"></i>${aisle}</span><span class="text-[10px] text-slate-400">${grouped[aisle].filter(i=>i.bought).length}/${grouped[aisle].length}</span></h4>`;
+                
+                grouped[aisle].forEach(item => {
+                    html += `
+                        <div class="flex items-center justify-between py-2 border-b border-slate-50 last:border-none">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" ${item.bought ? 'checked' : ''} onclick="toggleItem(${item.originalIndex})" class="w-5 h-5 accent-emerald-600 rounded cursor-pointer">
+                                <span class="${item.bought ? 'line-through text-slate-400' : 'text-slate-700'} font-medium text-sm">${item.name}</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-semibold text-slate-600">R$ ${(Number(item.price)||0).toFixed(2).replace('.', ',')}</span>
+                                <button onclick="deleteItem(${item.originalIndex})" class="text-slate-300 hover:text-rose-500 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+                sectionDiv.innerHTML = html;
+                listContainer.appendChild(sectionDiv);
+            }
+
+            document.getElementById('active-store-badge').innerText = window.appData.activeStore;
+        }
+
+        window.addItem = function() {
+            const nameInput = document.getElementById('item-input');
+            const priceInput = document.getElementById('price-input');
+            const aisleInput = document.getElementById('aisle-input');
+            if (!nameInput.value.trim()) return;
+            window.appData[activeCategory].push({
+                id: Date.now(), name: nameInput.value.trim(), price: parseFloat(priceInput.value) || 0.00, bought: false, aisle: aisleInput.value
+            });
+            nameInput.value = ''; priceInput.value = '';
+            window.saveData(); window.renderList();
+        }
+
+        window.toggleItem = function(index) {
+            window.appData[activeCategory][index].bought = !window.appData[activeCategory][index].bought;
+            window.saveData(); window.renderList();
+        }
+
+        window.deleteItem = function(index) {
+            window.appData[activeCategory].splice(index, 1);
+            window.saveData(); window.renderList();
+        }
+
+        window.clearCompletedItems = function() {
+            if(!confirm('Deseja remover todos os artigos já comprados do carrinho?')) return;
+            window.appData[activeCategory] = window.appData[activeCategory].filter(item => !item.bought);
+            window.saveData(); window.renderList();
+        }
+
+        // --- CONSULTOR IA DE PREÇOS LOCAIS ---
+        window.askLocalAI = function() {
+            const query = document.getElementById('ai-query-input').value.trim();
+            if (!query) return alert('Introduza o artigo que pretende procurar!');
+            processAiQuery(query);
+        }
+
+        window.quickAiSearch = function(term) {
+            document.getElementById('ai-query-input').value = term;
+            processAiQuery(term);
+        }
+
+        function processAiQuery(query) {
+            const box = document.getElementById('ai-response-box');
+            const textEl = document.getElementById('ai-response-text');
+            const titleEl = document.getElementById('ai-query-title');
+            const cardsContainer = document.getElementById('ai-market-cards');
+            
+            box.classList.remove('hidden');
+            titleEl.innerText = `Pesquisa: "${query}"`;
+            cardsContainer.innerHTML = '';
+
+            const q = query.toLowerCase();
+            let summaryText = "";
+            let marketSuggestions = [];
+
+            if (q.includes('leite')) {
+                summaryText = "Análise concluída para <b>Leite Integral</b> na Ilha do Governador.";
+                marketSuggestions = [
+                    { store: "Assaí Atacadista (Jd. Carioca)", price: 5.29, type: "Mais Barato", category: "mercado" },
+                    { store: "Supermarket (Cocotá)", price: 5.69, type: "Preço Regular", category: "mercado" }
+                ];
+            } else if (q.includes('arroz')) {
+                summaryText = "Análise concluída para <b>Arroz</b> na região.";
+                marketSuggestions = [
+                    { store: "Assaí Atacadista (Jd. Carioca)", price: 26.90, type: "Melhor Custo-Benefício", category: "mercado" },
+                    { store: "Supermarket (Cocotá)", price: 28.50, type: "Alternativa Próxima", category: "mercado" }
+                ];
+            } else {
+                summaryText = `Análise baseada no comportamento de consumo na Ilha para <b>"${query}"</b>.`;
+                marketSuggestions = [
+                    { store: "Assaí Atacadista (Jd. Carioca)", price: 15.00, type: "Estimativa Média", category: "mercado" }
+                ];
+            }
+
+            textEl.innerHTML = summaryText;
+
+            marketSuggestions.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100 text-xs";
+                card.innerHTML = `
+                    <div>
+                        <span class="font-bold text-slate-700 block">${item.store}</span>
+                        <span class="text-emerald-600 font-medium">${item.type}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold text-slate-800 text-sm block">R$ ${item.price.toFixed(2).replace('.', ',')}</span>
+                        <button onclick="addAiItemTopping('${query}', ${item.price}, '${item.category}')" class="mt-1 px-2 py-1 bg-emerald-600 text-white rounded text-[10px] font-semibold hover:bg-emerald-700 transition">
+                            <i class="fa-solid fa-plus mr-1"></i> Adicionar ao Carrinho
+                        </button>
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        window.addAiItemTopping = function(name, price, category) {
+            window.appData[category].push({
+                id: Date.now(),
+                name: name,
+                price: price,
+                bought: false,
+                aisle: 'Mercearia & Despensa'
+            });
+            window.saveData();
+            window.renderList();
+            alert(`Artigo "${name}" adicionado com sucesso ao seu carrinho!`);
+            window.switchView('lista');
+        }
+
+        window.searchPriceHistory = function(query) {
+            const container = document.getElementById('history-results');
+            container.innerHTML = '';
+            const filtered = (window.appData.priceHistory || []).filter(h => h.name.toLowerCase().includes(query.toLowerCase()));
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-4 bg-white rounded-xl text-center text-slate-400 text-sm">Sem histórico registado.</div>`;
+                return;
+            }
+            filtered.forEach(h => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center text-sm";
+                card.innerHTML = `<div><b>${h.name}</b><span class="block text-xs text-slate-400">${h.store} • ${h.period}</span></div><span class="font-bold text-emerald-600">R$ ${h.price.toFixed(2).replace('.', ',')}</span>`;
+                container.appendChild(card);
+            });
+        }
+
+        window.updateRadius = function(val) { currentRadius = val; document.getElementById('radius-label').innerText = `${val} km`; }
+        window.openStoreModal = function() { document.getElementById('store-modal').classList.remove('hidden'); }
+        window.closeStoreModal = function() { document.getElementById('store-modal').classList.add('hidden'); }
+
+        window.saveNewStore = function() {
+            const name = document.getElementById('new-store-name').value.trim();
+            const cat = document.getElementById('new-store-cat').value;
+            const dist = parseFloat(document.getElementById('new-store-dist').value) || 1.0;
+            if (!name) return alert('Introduza o nome.');
+            window.appData.stores.push({ id: Date.now(), name, cat, dist });
+            window.saveData(); window.closeStoreModal();
+            document.getElementById('new-store-name').value = '';
+            alert('Estabelecimento registado com sucesso!');
+        }
+    </script>
+</body>
+</html>
