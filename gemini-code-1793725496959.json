@@ -1,0 +1,9 @@
+{
+  "name": "Cesta Família",
+  "short_name": "CestaFamília",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#059669",
+  "orientation": "portrait"
+}
